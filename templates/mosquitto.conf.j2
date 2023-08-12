@@ -1,0 +1,5 @@
+listener {{ mosquitto_docker_listener_port }} {{ mosquitto_docker_listener_ip | default(omit) }}
+
+{% for key, value in mosquitto_docker_conf_options.items() %}
+{{ key }} {{ value }}
+{% endfor %}

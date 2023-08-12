@@ -1,0 +1,11 @@
+---
+- name: "Stat directory: {{ _dir_name }}"
+  ansible.builtin.stat:
+    path: "{{ _dir_name }}"
+  register: "_dir_info"
+
+- name: "Verify directory exists: {{ _dir_name }}"
+  ansible.builtin.assert:
+    that:
+      - "_dir_info.stat.exists"
+      - "_dir_info.stat.isdir"

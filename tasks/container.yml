@@ -1,0 +1,95 @@
+---
+- name: "Set Docker volume list for bind mounts"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_mount_list:
+      - source: "{{ mosquitto_docker_dir_conf }}"
+        target: "/mosquitto/config"
+        type: "bind"
+      - source: "{{ mosquitto_docker_dir_data }}"
+        target: "/mosquitto/data"
+        type: "bind"
+      - source: "{{ mosquitto_docker_dir_logs }}"
+        target: "/mosquitto/logs"
+        type: "bind"
+  when: "not mosquitto_docker_use_volumes"
+
+- name: "Set Docker mount list for volume mounts"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_mount_list:
+      - source: "{{ mosquitto_docker_volume_name_conf }}"
+        target: "/mosquitto/config"
+        type: "volume"
+      - source: "{{ mosquitto_docker_volume_name_data }}"
+        target: "/mosquitto/data"
+        type: "volume"
+      - source: "{{ mosquitto_docker_volume_name_logs }}"
+        target: "/mosquitto/logs"
+        type: "volume"
+  when: "mosquitto_docker_use_volumes"
+
+- name: "Convert created network into array of dictionary"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_created_networks:
+      - name: "{{ mosquitto_docker_network }}"
+        ipv4_address: "{{ _mosquitto_docker_network_ipv4 | default(omit) }}"
+        ipv6_address: "{{ _mosquitto_docker_network_ipv6 | default(omit) }}"
+        aliases: "{{ _mosquitto_docker_network_aliases | default(omit) }}"
+  when: "mosquitto_docker_network_create"
+
+- name: "Create placeholder array for created network"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_created_networks: []
+  when: "not mosquitto_docker_network_create"
+
+- name: "Define all Docker networks for this container"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_all_networks: >
+      {{ _fact_mosquitto_docker_created_networks + mosquitto_docker_extra_networks }}
+
+- name: "Define Docker labels with Traefik disabled"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_labels: "{{ _fact_mosquitto_docker_labels | default({}) |
+      combine({item.key: item.value}) }}"
+  with_items:
+    - key: "traefik.enable"
+      value: "{{ mosquitto_docker_available_externally }}"
+  when: "not mosquitto_docker_available_externally"
+
+- name: "Define Docker labels with Traefik enabled"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_labels: "{{ _fact_mosquitto_docker_labels | default({}) |
+      combine({item.key: item.value}) }}"
+  with_items:
+    - key: "traefik.enable"
+      value: "{{ mosquitto_docker_available_externally }}"
+    - key: "traefik.tcp.routers.{{ mosquitto_docker_traefik_entrypoint }}.entrypoints"
+      value: "{{ mosquitto_docker_traefik_entrypoint }}"
+    - key: "traefik.tcp.routers.{{ mosquitto_docker_traefik_entrypoint }}.rule"
+      value: "HostSNI(`*`)"
+    - key: "traefik.tcp.services.{{ mosquitto_docker_traefik_entrypoint }}.loadBalancer.server.port"
+      value: "{{ mosquitto_docker_listener_port }}"
+  when: "mosquitto_docker_available_externally"
+
+- name: "Create mosquitto Docker container"  # noqa: args[module]
+  community.docker.docker_container:
+    name: "{{ mosquitto_docker_name }}"
+    image: "{{ mosquitto_docker_image_name }}:{{ mosquitto_docker_image_version }}"
+    pull: true
+    mounts: "{{ _fact_mosquitto_docker_mount_list }}"
+    network_mode: "{{ mosquitto_docker_network }}"
+    networks: "{{ _fact_mosquitto_docker_all_networks }}"
+    exposed_ports:
+      - "{{ mosquitto_docker_listener_port }}"
+    restart_policy: unless-stopped
+    memory: "{{ mosquitto_docker_memory }}"
+    cpus: "{{ mosquitto_docker_cpus }}"
+    container_default_behavior: "no_defaults"
+    auto_remove: false
+    detach: true
+    init: true
+    interactive: false
+    paused: false
+    privileged: false
+    read_only: false
+    tty: false
+    labels: "{{ _fact_mosquitto_docker_labels }}"

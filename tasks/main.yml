@@ -1,0 +1,19 @@
+---
+- name: "Run general setup"
+  ansible.builtin.import_tasks: "setup.yml"
+  tags:
+    - "mosquitto"
+    - "mosquitto:setup"
+
+- name: "Run network setup"
+  ansible.builtin.import_tasks: "network.yml"
+  tags:
+    - "mosquitto"
+    - "mosquitto:network"
+  when: "mosquitto_docker_network_create"
+
+- name: "Create container"
+  ansible.builtin.import_tasks: "container.yml"
+  tags:
+    - "mosquitto"
+    - "mosquitto:docker"

@@ -1,0 +1,55 @@
+---
+- name: "Verify novolumes"
+  hosts: "all"
+  gather_facts: false
+  become: true
+
+  vars:
+    mosquitto_docker_name: "mosquitto"
+    mosquitto_docker_network: "mosquitto"
+    mosquitto_docker_volume_name_conf: "mosquitto-conf"
+    mosquitto_docker_volume_name_data: "mosquitto-data"
+    mosquitto_docker_volume_name_logs: "mosquitto-logs"
+
+    mosquitto_docker_dir_conf: "/etc/mosquitto"
+    mosquitto_docker_dir_data: "/var/lib/mosquitto"
+    mosquitto_docker_dir_logs: "/var/log/mosquitto"
+
+  tasks:
+    - name: "Verifying volumes do not exist"
+      include_tasks: "verify_volume.yml"
+      loop:
+        - "{{ mosquitto_docker_volume_name_conf }}"
+        - "{{ mosquitto_docker_volume_name_data }}"
+        - "{{ mosquitto_docker_volume_name_logs }}"
+      loop_control:
+        loop_var: "_volume_name"
+
+    - name: "Verify directories"
+      include_tasks: "verify_directory.yml"
+      loop:
+        - "{{ mosquitto_docker_dir_conf }}"
+        - "{{ mosquitto_docker_dir_data }}"
+        - "{{ mosquitto_docker_dir_logs }}"
+      loop_control:
+        loop_var: "_dir_name"
+
+    - name: "Get info on default network"
+      community.docker.docker_network_info:
+        name: "{{ mosquitto_docker_network }}"
+      register: "_network_info"
+
+    - name: "Verify default network exists"
+      ansible.builtin.assert:
+        that: "_network_info.exists"
+
+    - name: "Get info on container: {{ mosquitto_docker_name }}"
+      community.docker.docker_container_info:
+        name: "{{ mosquitto_docker_name }}"
+      register: "container_info"
+
+    - name: "Verify container exists and is running: {{ mosquitto_docker_name }}"
+      ansible.builtin.assert:
+        that:
+          - "container_info.exists"
+          - "container_info.container['State']['Running']"

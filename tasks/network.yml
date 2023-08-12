@@ -1,0 +1,12 @@
+---
+- name: "Create Docker network"
+  community.docker.docker_network:
+    name: "{{ mosquitto_docker_network }}"
+    driver: "{{ mosquitto_docker_network_driver }}"
+    enable_ipv6: "{{ mosquitto_docker_network_enable_ipv6 }}"
+    internal: "{{ mosquitto_docker_network_internal }}"
+    scope: "{{ mosquitto_docker_network_scope }}"
+    ipam_config:
+      - subnet: "{{ mosquitto_docker_network_subnet }}"
+        gateway: "{{ mosquitto_docker_network_gateway }}"
+  when: "mosquitto_docker_network_create"

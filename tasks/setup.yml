@@ -1,0 +1,44 @@
+---
+- name: "Create mosquitto data directories for bind mounts"
+  ansible.builtin.file:
+    name: "{{ item }}"
+    state: "directory"
+    mode: "0770"
+  loop:
+    - "{{ mosquitto_docker_dir_conf }}"
+    - "{{ mosquitto_docker_dir_data }}"
+    - "{{ mosquitto_docker_dir_logs }}"
+  when: "not mosquitto_docker_use_volumes"
+
+- name: "Create mosquitto Docker volumes"
+  community.docker.docker_volume:
+    name: "{{ item }}"
+  loop:
+    - "{{ mosquitto_docker_volume_name_conf }}"
+    - "{{ mosquitto_docker_volume_name_data }}"
+    - "{{ mosquitto_docker_volume_name_logs }}"
+  when: "mosquitto_docker_use_volumes"
+
+- name: "Get info on mosquitto config Docker volume"
+  community.docker.docker_volume_info:
+    name: "{{ mosquitto_docker_volume_name_conf }}"
+  register: "_mosquitto_docker_volume_conf_info"
+  when: "mosquitto_docker_use_volumes"
+
+- name: "Build target path to Docker conf volume"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_conf_folder:
+      "{{ _mosquitto_docker_volume_conf_info['volume']['Mountpoint'] }}"
+  when: "mosquitto_docker_use_volumes"
+
+- name: "Build target path to conf folder for bind mount"
+  ansible.builtin.set_fact:
+    _fact_mosquitto_docker_conf_folder: "{{ mosquitto_docker_dir_conf }}"
+  when: "not mosquitto_docker_use_volumes"
+
+- name: "Create mosquite.conf"
+  ansible.builtin.template:
+    src: "templates/mosquitto.conf.j2"
+    dest: "{{ _fact_mosquitto_docker_conf_folder }}/mosquitto.conf"
+    mode: "0644"
+  register: _mosquitto_docker_config

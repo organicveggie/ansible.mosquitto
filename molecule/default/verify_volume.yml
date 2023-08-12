@@ -1,0 +1,9 @@
+---
+- name: "Get info on volume: {{ _volume_name }}"
+  community.docker.docker_volume_info:
+    name: "{{ _volume_name }}"
+  register: "_volume_info"
+
+- name: "Verify volume exists: {{ _volume_name }}"
+  ansible.builtin.assert:
+    that: "{{ _volume_info.exists }}"
