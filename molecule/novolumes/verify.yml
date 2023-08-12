@@ -17,7 +17,7 @@
 
   tasks:
     - name: "Verifying volumes do not exist"
-      include_tasks: "verify_volume.yml"
+      ansible.builtin.include_tasks: "tasks/verify_volume.yml"
       loop:
         - "{{ mosquitto_docker_volume_name_conf }}"
         - "{{ mosquitto_docker_volume_name_data }}"
@@ -26,7 +26,7 @@
         loop_var: "_volume_name"
 
     - name: "Verify directories"
-      include_tasks: "verify_directory.yml"
+      ansible.builtin.include_tasks: "tasks/verify_directory.yml"
       loop:
         - "{{ mosquitto_docker_dir_conf }}"
         - "{{ mosquitto_docker_dir_data }}"
